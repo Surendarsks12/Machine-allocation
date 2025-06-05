@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Production Allocation System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-bold mb-6 text-center">🛠️ Production Allocation System</h1>
+
+    <!-- Shift Configuration -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Shift Configuration</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <input id="shiftCount" type="number" placeholder="No. of Shifts" class="border p-2 rounded" />
+        <input id="hoursPerShift" type="number" placeholder="Hours per Shift" class="border p-2 rounded" />
+        <input id="allowanceTime" type="number" placeholder="Allowance Time (mins)" class="border p-2 rounded" />
+      </div>
+    </div>
+
+    <!-- Component Entry -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Component Entry</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <input id="componentId" type="text" placeholder="Component Code (e.g. 11101)" class="border p-2 rounded" />
+        <input id="quantity" type="number" placeholder="Quantity" class="border p-2 rounded" />
+        <input id="deliveryDate" type="date" class="border p-2 rounded" />
+      </div>
+      <button onclick="addComponent()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Component</button>
+    </div>
+
+    <!-- Component List Table -->
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Entered Components</h2>
+      <table class="min-w-full border mt-2 text-sm" id="componentTable">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border px-4 py-2">Component Code</th>
+            <th class="border px-4 py-2">Operation Time</th>
+            <th class="border px-4 py-2">Quantity</th>
+            <th class="border px-4 py-2">Delivery Date</th>
+          </tr>
+        </thead>
+        <tbody id="componentTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Allocate Button -->
+    <div class="text-center mt-6">
+      <button onclick="allocate()" class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700">🚀 Allocate Machines</button>
+    </div>
+  </div>
+
+  <script>
+    const componentEntries = [];
+    let componentData = [];
+
+    // ✅ REPLACE WITH YOUR GOOGLE SCRIPT WEB APP URL
+    const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyz8kRTyMB9lZ1xR2dQUmf7ExKc06oJCdC7cLD963TXstts5G7LiRJjJMDLRf8HP520Wg/exec";
+
+    async function fetchComponentData() {
+      const res = await fetch(SHEET_API_URL);
+      componentData = await res.json();
+    }
+
+    function findComponentDetails(id) {
+      return componentData.find(c => c["Component ID"] == id);
+    }
+
+    function addComponent() {
+      const compId = document.getElementById('componentId').value;
+      const qty = document.getElementById('quantity').value;
+      const date = document.getElementById('deliveryDate').value;
+
+      if (!compId || !qty || !date) {
+        alert("Fill all fields!");
+        return;
+      }
+
+      const compDetails = findComponentDetails(compId);
+      if (!compDetails) {
+        alert("Component not found in sheet!");
+        return;
+      }
+
+      const row = {
+        compId,
+        operationTime: compDetails["Operation Time"] || "N/A",
+        qty,
+        date
+      };
+
+      componentEntries.push(row);
+      const tbody = document.getElementById("componentTableBody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="border px-4 py-2">${row.compId}</td>
+        <td class="border px-4 py-2">${row.operationTime}</td>
+        <td class="border px-4 py-2">${row.qty}</td>
+        <td class="border px-4 py-2">${row.date}</td>`;
+      tbody.appendChild(tr);
+
+      // Clear form
+      document.getElementById('componentId').value = '';
+      document.getElementById('quantity').value = '';
+      document.getElementById('deliveryDate').value = '';
+    }
+
+    function allocate() {
+      if (componentEntries.length === 0) {
+        alert("No components to allocate!");
+        return;
+      }
+
+      alert("✅ Allocation logic will be implemented here next.");
+      // Later: use componentEntries, shiftCount, hoursPerShift, etc.
+    }
+
+    // Fetch on page load
+    fetchComponentData();
+  </script>
+</body>
+</html>
