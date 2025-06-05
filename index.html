@@ -5,38 +5,53 @@
   <title>Production Allocation</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-8">
-  <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow-lg">
-    <h1 class="text-3xl font-bold text-center mb-6">⚙️ Production Allocation</h1>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-bold mb-6 text-center">⚙️ Production Allocation</h1>
 
-    <!-- Start Date -->
-    <div class="mb-4">
-      <label class="font-semibold block mb-1">Start Date:</label>
-      <input id="startDate" type="date" class="border p-2 rounded w-64" />
+    <!-- Shift Config -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+      <input id="startDate" type="date" class="border p-2 rounded" />
+      <input id="shiftCount" type="number" placeholder="Shifts/Day" class="border p-2 rounded" />
+      <input id="shiftHours" type="number" placeholder="Hours/Shift" class="border p-2 rounded" />
+      <input id="allowance" type="number" placeholder="Allowance (min)" class="border p-2 rounded" />
     </div>
 
     <!-- Component Entry -->
-    <div class="mb-6">
-      <label class="font-semibold block mb-1">Enter Component IDs (comma separated):</label>
-      <input id="componentIds" type="text" placeholder="11101, 11102" class="border p-2 rounded w-full" />
+    <div class="grid grid-cols-3 gap-4 mb-4">
+      <input id="componentId" type="text" placeholder="Component ID" class="border p-2 rounded" />
+      <input id="quantity" type="number" placeholder="Quantity" class="border p-2 rounded" />
+      <input id="dueDate" type="date" class="border p-2 rounded" />
+    </div>
+    <button onclick="addComponent()" class="bg-blue-600 text-white px-4 py-2 rounded">➕ Add Component</button>
+
+    <!-- Component Table -->
+    <div class="mt-6">
+      <h2 class="text-xl font-semibold mb-2">📋 Components Added</h2>
+      <table class="min-w-full border text-sm">
+        <thead class="bg-gray-200">
+          <tr><th class="border p-2">Component ID</th><th class="border p-2">Quantity</th><th class="border p-2">Due Date</th></tr>
+        </thead>
+        <tbody id="componentTableBody"></tbody>
+      </table>
     </div>
 
     <!-- Allocate Button -->
-    <div class="mb-6">
-      <button onclick="allocate()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">🚀 Allocate</button>
+    <div class="text-center mt-6">
+      <button onclick="allocate()" class="bg-green-600 text-white px-6 py-3 rounded">🚀 Allocate</button>
     </div>
 
-    <!-- Output Table -->
-    <div>
-      <h2 class="text-xl font-bold mb-2">📄 Allocation Result:</h2>
-      <table class="min-w-full border text-sm" id="resultTable">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="border px-4 py-2">Component ID</th>
-            <th class="border px-4 py-2">Operation</th>
-            <th class="border px-4 py-2">Machine</th>
-            <th class="border px-4 py-2">Date</th>
-            <th class="border px-4 py-2">Cost/hr</th>
+    <!-- Allocation Result -->
+    <div id="allocationResult" class="mt-8 hidden">
+      <h2 class="text-xl font-semibold mb-2">📅 Allocation Result</h2>
+      <table class="min-w-full border text-sm">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="border p-2">Component ID</th>
+            <th class="border p-2">Operation</th>
+            <th class="border p-2">Machine</th>
+            <th class="border p-2">Date</th>
+            <th class="border p-2">Cost/hr</th>
           </tr>
         </thead>
         <tbody id="resultBody"></tbody>
@@ -45,64 +60,81 @@
   </div>
 
   <script>
-    const SHEET_API = "https://script.google.com/macros/s/AKfycby8hy_NO6eQciLwuiZfG3eGFdr4oDMQ84EwAtu3VX6I3_gpJYtBG4epChWsKkJcqskg_A/exec"; // Replace with your deployed script URL
+    const SHEET_API = "https://script.google.com/macros/s/AKfycbzml0YjKqjA_uNkEkS4TeSaTi9JaicA8soTVT5yaUnVrLmZryPXtBKK_beHcjna58wTSw/exec";
+    let sheetData = [], components = [];
 
-    async function fetchData() {
+    async function fetchSheet() {
       const res = await fetch(SHEET_API);
-      return await res.json();
+      sheetData = await res.json();
     }
 
-    function getDateAfter(start, days) {
-      const date = new Date(start);
-      date.setDate(date.getDate() + days);
-      return date.toISOString().split("T")[0];
+    function addComponent() {
+      const id = document.getElementById("componentId").value;
+      const qty = +document.getElementById("quantity").value;
+      const date = document.getElementById("dueDate").value;
+      if (!id || !qty || !date) return alert("Fill all fields!");
+      components.push({ id, qty, due: date });
+
+      const row = `<tr>
+        <td class="border p-2">${id}</td>
+        <td class="border p-2">${qty}</td>
+        <td class="border p-2">${date}</td>
+      </tr>`;
+      document.getElementById("componentTableBody").insertAdjacentHTML("beforeend", row);
+      document.getElementById("componentId").value = '';
+      document.getElementById("quantity").value = '';
+      document.getElementById("dueDate").value = '';
     }
 
     function allocate() {
-      const compInput = document.getElementById("componentIds").value.trim();
-      const startDate = document.getElementById("startDate").value;
-      const resultBody = document.getElementById("resultBody");
-      resultBody.innerHTML = "";
+      const startDate = new Date(document.getElementById("startDate").value);
+      const shifts = +document.getElementById("shiftCount").value;
+      const hours = +document.getElementById("shiftHours").value;
+      const allowance = +document.getElementById("allowance").value;
 
-      if (!compInput || !startDate) {
-        alert("Please fill all fields.");
-        return;
-      }
+      const totalTime = shifts * (hours - allowance / 60);
+      let currentDate = new Date(startDate);
+      let remaining = totalTime;
+      let result = [];
 
-      const compIds = compInput.split(",").map(c => c.trim());
-      fetchData().then(data => {
-        let dayCounter = 0;
+      components.forEach(comp => {
+        const rows = sheetData.filter(r => String(r["Component ID"]).trim() === comp.id);
+        rows.forEach((op, i) => {
+          const opTime = +op["Operation Time"];
+          if (opTime > remaining) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            remaining = totalTime;
+          }
 
-        compIds.forEach(cid => {
-          const ops = data.filter(row => row["Component ID"] == cid);
-          ops.sort((a, b) => a["operations"] - b["operations"]);
+          const machines = ["T1","T2","T3","T4","V1","V2"].filter(m => +op[m] === 1);
+          const costs = machines.map(m => ({ m, cost: +op[m + "_cost"] || 9999 }));
+          const best = costs.sort((a,b)=>a.cost - b.cost)[0];
 
-          ops.forEach(op => {
-            const machines = ["T1", "T2", "T3", "T4", "V1", "V2"];
-            let best = null;
-            machines.forEach(m => {
-              if (op[m] == "1") {
-                const cost = Number(op[`cost_${m}`]);
-                if (!best || cost < best.cost) {
-                  best = { machine: m, cost };
-                }
-              }
-            });
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td class="border px-4 py-2">${cid}</td>
-              <td class="border px-4 py-2">${op["operations"]}</td>
-              <td class="border px-4 py-2">${best?.machine || "-"}</td>
-              <td class="border px-4 py-2">${getDateAfter(startDate, dayCounter)}</td>
-              <td class="border px-4 py-2">${best?.cost || "-"}</td>
-            `;
-            resultBody.appendChild(row);
-            dayCounter += 1;
+          result.push({
+            id: comp.id,
+            op: op["operations"],
+            machine: best.m,
+            date: currentDate.toISOString().split('T')[0],
+            cost: best.cost
           });
+
+          remaining -= opTime;
         });
       });
+
+      // Display
+      document.getElementById("allocationResult").classList.remove("hidden");
+      document.getElementById("resultBody").innerHTML = result.map(r => `
+        <tr>
+          <td class="border p-2">${r.id}</td>
+          <td class="border p-2">${r.op}</td>
+          <td class="border p-2">${r.machine}</td>
+          <td class="border p-2">${r.date}</td>
+          <td class="border p-2">${r.cost}</td>
+        </tr>`).join('');
     }
+
+    fetchSheet();
   </script>
 </body>
 </html>
