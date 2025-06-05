@@ -2,35 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Production Allocation</title>
+  <title>Production Allocation System</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-6">
-  <div class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow">
-    <h1 class="text-3xl font-bold text-center mb-6">⚙️ Production Allocation</h1>
+  <div class="max-w-7xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+    <h1 class="text-3xl font-bold mb-6 text-center">🛠️ Production Allocation System</h1>
 
-    <div class="mb-4">
-      <label class="font-semibold">Start Date:</label>
-      <input id="startDate" type="date" class="border p-2 rounded ml-2" />
-      <button onclick="allocateMachines()" class="bg-green-600 text-white px-4 py-2 rounded ml-4">🚀 Allocate</button>
+    <!-- Shift Configuration -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Shift Configuration</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <input id="shiftCount" type="number" placeholder="No. of Shifts" class="border p-2 rounded" />
+        <input id="hoursPerShift" type="number" placeholder="Hours per Shift" class="border p-2 rounded" />
+        <input id="allowanceTime" type="number" placeholder="Allowance Time (mins)" class="border p-2 rounded" />
+      </div>
     </div>
 
-    <div id="output" class="mt-6 text-sm"></div>
+    <!-- Component Entry -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold mb-2">Component Entry</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <input id="componentId" type="text" placeholder="Component Code (e.g. 11101)" class="border p-2 rounded" />
+        <input id="quantity" type="number" placeholder="Quantity" class="border p-2 rounded" />
+        <input id="deliveryDate" type="date" class="border p-2 rounded" />
+      </div>
+      <button onclick="addComponent()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Component</button>
+    </div>
+
+    <!-- Component Table -->
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Entered Components</h2>
+      <table class="min-w-full border mt-2 text-sm" id="componentTable">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border px-4 py-2">Component Code</th>
+            <th class="border px-4 py-2">Operation Time</th>
+            <th class="border px-4 py-2">Quantity</th>
+            <th class="border px-4 py-2">Delivery Date</th>
+          </tr>
+        </thead>
+        <tbody id="componentTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Allocation -->
+    <div class="mt-8 border-t pt-6">
+      <h2 class="text-xl font-semibold mb-2">Machine Allocation</h2>
+      <label class="font-semibold">Start Date:</label>
+      <input id="startDate" type="date" class="border p-2 rounded ml-2 mb-4" />
+      <button onclick="allocateMachines()" class="bg-green-600 text-white px-6 py-2 rounded ml-4 hover:bg-green-700">🚀 Allocate Machines</button>
+      <div id="output" class="mt-6 text-sm"></div>
+    </div>
   </div>
 
   <script>
-    const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyGIjBudnlqOO7HL2zQFB4RaGlgazJT1C_ythWQmALe48K0Uwiw3SaB8p-AXiqUQTGung/exec";
     let componentData = [];
+    const componentEntries = [];
 
-    async function fetchData() {
+    const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwmOHNQqkhzqXhjGnw0CvXESb3cjX6D4wtXFC-xcwarOvkS40iO3_rurmij19K847Mc2w/exec"; // Replace this with your actual URL
+
+    async function fetchComponentData() {
       try {
         const res = await fetch(SHEET_API_URL);
         componentData = await res.json();
-        console.log("Fetched:", componentData);
-      } catch (e) {
-        alert("❌ Failed to fetch sheet data");
-        console.error(e);
+        console.log("Fetched data:", componentData);
+      } catch (err) {
+        alert("❌ Failed to fetch sheet data.");
+        console.error(err);
       }
+    }
+
+    function findComponentDetails(id) {
+      return componentData.find(c => String(c["Component ID"]).trim() === String(id).trim());
+    }
+
+    function addComponent() {
+      const compId = document.getElementById('componentId').value;
+      const qty = document.getElementById('quantity').value;
+      const date = document.getElementById('deliveryDate').value;
+
+      if (!compId || !qty || !date) {
+        alert("❗ Fill all fields!");
+        return;
+      }
+
+      const compDetails = findComponentDetails(compId);
+      if (!compDetails) {
+        alert("⚠️ Component not found in sheet!");
+        return;
+      }
+
+      const row = {
+        compId,
+        operationTime: compDetails["Operation Time"] || "N/A",
+        qty,
+        date,
+        fullDetails: compDetails
+      };
+
+      componentEntries.push(row);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="border px-4 py-2">${row.compId}</td>
+        <td class="border px-4 py-2">${row.operationTime}</td>
+        <td class="border px-4 py-2">${row.qty}</td>
+        <td class="border px-4 py-2">${row.date}</td>
+      `;
+      document.getElementById("componentTableBody").appendChild(tr);
+
+      // Clear inputs
+      document.getElementById('componentId').value = '';
+      document.getElementById('quantity').value = '';
+      document.getElementById('deliveryDate').value = '';
     }
 
     function getNextDate(base, addDays) {
@@ -57,15 +142,16 @@
         <th class="border px-3 py-1">Date</th>
         <th class="border px-3 py-1">Cost/hr</th></tr></thead><tbody>`;
 
-      componentData.forEach(row => {
-        const suitableMachines = Object.entries(row.suitable).filter(([m, v]) => v == 1);
+      componentEntries.forEach(entry => {
+        const row = entry.fullDetails;
+        const suitableMachines = Object.entries(row.suitable || {}).filter(([m, v]) => v == 1);
         if (suitableMachines.length === 0) return;
 
         let bestMachine = null;
         let minCost = Infinity;
 
         suitableMachines.forEach(([machine]) => {
-          const cost = Number(row.cost[machine]);
+          const cost = Number(row.cost?.[machine]);
           if (cost < minCost) {
             minCost = cost;
             bestMachine = machine;
@@ -74,13 +160,12 @@
 
         const allocDate = getNextDate(startDateInput, dayOffset);
         tableHTML += `<tr>
-          <td class="border px-3 py-1">${row.componentId}</td>
+          <td class="border px-3 py-1">${entry.compId}</td>
           <td class="border px-3 py-1">${row.operation}</td>
           <td class="border px-3 py-1">${bestMachine}</td>
           <td class="border px-3 py-1">${allocDate}</td>
           <td class="border px-3 py-1">${minCost}</td>
         </tr>`;
-
         dayOffset++;
       });
 
@@ -88,9 +173,7 @@
       outputDiv.innerHTML += tableHTML;
     }
 
-    fetchData();
+    fetchComponentData();
   </script>
 </body>
 </html>
-
-
