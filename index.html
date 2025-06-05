@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Production Allocation System</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-lg">
@@ -57,16 +56,22 @@
     const componentEntries = [];
     let componentData = [];
 
-    // 📁 Replace with your deployed Apps Script Web App URL
+    // ✅ Your correct deployed Web App URL
     const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyz8kRTyMB9lZ1xR2dQUmf7ExKc06oJCdC7cLD963TXstts5G7LiRJjJMDLRf8HP520Wg/exec";
 
     async function fetchComponentData() {
-      const res = await fetch(SHEET_API_URL);
-      componentData = await res.json();
+      try {
+        const res = await fetch(SHEET_API_URL);
+        componentData = await res.json();
+        console.log("Fetched component data:", componentData);
+      } catch (err) {
+        console.error("Failed to fetch component data", err);
+        alert("❌ Failed to load component data from sheet.");
+      }
     }
 
     function findComponentDetails(id) {
-      return componentData.find(c => c["Component ID"] == id);
+      return componentData.find(c => String(c["Component ID"]).trim() === String(id).trim());
     }
 
     function addComponent() {
@@ -75,13 +80,13 @@
       const date = document.getElementById('deliveryDate').value;
 
       if (!compId || !qty || !date) {
-        alert("Fill all fields!");
+        alert("❗ Fill all fields!");
         return;
       }
 
       const compDetails = findComponentDetails(compId);
       if (!compDetails) {
-        alert("Component not found in sheet!");
+        alert("⚠️ Component not found in sheet!");
         return;
       }
 
@@ -102,7 +107,7 @@
         <td class="border px-4 py-2">${row.date}</td>`;
       tbody.appendChild(tr);
 
-      // Clear form
+      // Clear inputs
       document.getElementById('componentId').value = '';
       document.getElementById('quantity').value = '';
       document.getElementById('deliveryDate').value = '';
@@ -110,16 +115,15 @@
 
     function allocate() {
       if (componentEntries.length === 0) {
-        alert("No components to allocate!");
+        alert("❗ No components added yet!");
         return;
       }
-
-      alert("✅ Allocation logic will be implemented here next.");
-      // Later: use componentEntries, shiftCount, hoursPerShift, etc.
+      alert("✅ Allocation logic will run here.");
     }
 
-    // Fetch on page load
+    // Fetch Google Sheet data on page load
     fetchComponentData();
   </script>
 </body>
 </html>
+
