@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Production Allocation System</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="bg-gray-100 p-6">
   <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-lg">
@@ -56,7 +57,7 @@
     const componentEntries = [];
     let componentData = [];
 
-    // ✅ REPLACE WITH YOUR GOOGLE SCRIPT WEB APP URL
+    // 📁 Replace with your deployed Apps Script Web App URL
     const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbyz8kRTyMB9lZ1xR2dQUmf7ExKc06oJCdC7cLD963TXstts5G7LiRJjJMDLRf8HP520Wg/exec";
 
     async function fetchComponentData() {
